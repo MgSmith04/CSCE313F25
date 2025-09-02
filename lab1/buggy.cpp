@@ -29,13 +29,13 @@ class Shape {
     void addPoints (Point* pts/* formal parameter for unsized array called pts */) {
         for (int i = 0; i <= vertices; i++) {
             memcpy(points[i], &pts[i%vertices], sizeof(Point)); // segfaults here, why?
-            // copys address of pts[i] into points[i]
+            // copies address of pts[i] into points[i]
         }
     }
 
-    double* area () {
+    double area () {
         int temp = 0;
-        for (int i = 0; i <= vertices; i++) {
+        for (int i = 0; i < vertices; i++) {
             // FIXME: there are two methods to access members of pointers
             //        use one to fix lhs and the other to fix rhs
             int lhs = points[i]->x * points[i+1]->y;
@@ -43,7 +43,7 @@ class Shape {
             temp += (lhs - rhs);
         }
         double area = abs(temp)/2.0;
-        return &area;
+        return area;
     }
 };
 
@@ -81,4 +81,9 @@ int main () {
     quad->addPoints(quadPts);
 
     // FIXME: print out area of tri and area of quad
+    double triArea = tri->area();
+    double quadArea = quad->area();
+
+    std::cout << "Triangle Area: " << triArea << std::endl;
+    std::cout << "Quad Area: " << quadArea << std::endl;
 }
