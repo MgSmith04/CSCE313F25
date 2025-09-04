@@ -24,6 +24,10 @@ class Shape {
     }
 
     ~Shape () {
+        for (int i = 0; i <= vertices; i++) {
+            delete points[i];
+        }
+        delete[] points;
     }
 
     void addPoints (Point* pts/* formal parameter for unsized array called pts */) {
@@ -86,4 +90,8 @@ int main () {
 
     std::cout << "Triangle Area: " << triArea << std::endl;
     std::cout << "Quad Area: " << quadArea << std::endl;
+
+    // clean up memory
+    delete tri;
+    delete quad;
 }
