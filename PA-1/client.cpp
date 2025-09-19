@@ -6,12 +6,13 @@
     Date: 2/8/20
 	
 	Please include your Name, UIN, and the date below
-	Name:
-	UIN:
-	Date:
+	Name: Matthew Smith
+	UIN: 932008265
+	Date: 2025/09/19
 */
 #include "common.h"
 #include "FIFORequestChannel.h"
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -38,6 +39,18 @@ int main (int argc, char *argv[]) {
 				filename = optarg;
 				break;
 		}
+	}
+
+	// run server as child process and connect it to FIFO
+	pid_t pid = fork();
+	if (pid == -1) {
+        cerr << "fork failed\n";
+        return 1;
+    }
+	if (pid == 0) {
+		// child process, run server
+		char* args[] = {(char*) "./server", (char*) nullptr};
+		execvp(args[0], args);
 	}
 
     FIFORequestChannel chan("control", FIFORequestChannel::CLIENT_SIDE);
@@ -67,4 +80,5 @@ int main (int argc, char *argv[]) {
 	// closing the channel    
     MESSAGE_TYPE m = QUIT_MSG;
     chan.cwrite(&m, sizeof(MESSAGE_TYPE));
+	wait(nullptr); // wait on server to close
 }
