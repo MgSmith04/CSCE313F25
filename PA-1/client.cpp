@@ -122,6 +122,7 @@ int main (int argc, char *argv[]) {
 	// only do file request if a file was actually requested
 	if (filename != "") {
 		fname = filename;
+		// cout << "fname: " << fname << endl; // DEBUG LINE
 		int len = sizeof(filemsg) + (fname.size() + 1);
 		char* buf2 = new char[len];
 		memcpy(buf2, &fm, sizeof(filemsg)); // copy fm to buf2
@@ -140,7 +141,30 @@ int main (int argc, char *argv[]) {
 			return 1;
 		}
 		// copy requested file to the new one
+		__int64_t remainingBytes = fileSize;
+		fm.length = MAX_MESSAGE; // message length
+		char fileBuf[MAX_MESSAGE]; // buffer to receive chunks of file data
+		while (remainingBytes > 256) {
+			// cout << "offset: " << fm.offset << endl; // DEBUG LINE
+			memcpy(buf2, &fm, sizeof(filemsg)); // copy fm to buf2
+			strcpy(buf2 + sizeof(filemsg), fname.c_str()); // buf2 contains fm and the name of the desired file
+			chan.cwrite(buf2, len); // send fm to server
+			chan.cread(fileBuf, MAX_MESSAGE); // receive reply and put it in a buffer
+			write(copyFD, fileBuf, MAX_MESSAGE); // write buffer to the file
 
+			remainingBytes = remainingBytes - MAX_MESSAGE; // iterate down by 256
+			fm.offset = fm.offset + MAX_MESSAGE;
+		}
+
+		// last chunk of data might not be full size
+		// cout << "out rBytes: " << remainingBytes << endl; // DEBUG LINE
+		fm.length = fileSize % MAX_MESSAGE;
+		// cout << "out offset: " << fm.offset << endl; // DEBUG LINE
+		memcpy(buf2, &fm, sizeof(filemsg)); // copy fm to buf2
+		strcpy(buf2 + sizeof(filemsg), fname.c_str()); // buf2 contains fm and the name of the desired file
+		chan.cwrite(buf2, len); // send fm to server
+		chan.cread(fileBuf, remainingBytes); // receive reply and put it in a buffer
+		write(copyFD, fileBuf, remainingBytes); // write buffer to the file
 
 		delete[] buf2;
 		close(copyFD);
@@ -149,4 +173,5 @@ int main (int argc, char *argv[]) {
 	// closing the channel & server
     MESSAGE_TYPE m = QUIT_MSG;
     chan.cwrite(&m, sizeof(MESSAGE_TYPE));
+	
 }
