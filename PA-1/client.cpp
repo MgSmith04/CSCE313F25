@@ -79,7 +79,7 @@ int main (int argc, char *argv[]) {
 	// get first 1000 data points for a given person and put them in a new file 
 	// TESTME
 	int newFd;
-	char* newFile[] = {(char*) "received/x1.csv", (char*) nullptr}; // WORKING ON THIS
+	char* newFile[] = {(char*) "received/x1.csv", (char*) nullptr};
 	newFd = open(*newFile, O_CREAT|O_TRUNC|O_WRONLY, S_IRWXU); // create file in recieved directory
 	if (newFd == -1) {
 		cerr << "file creation failed\n";
@@ -114,25 +114,39 @@ int main (int argc, char *argv[]) {
 		write(newFd, recBuf, strlen(recBuf));
 		t = t + 0.004;
 	}
+	close(newFd);
 
 	// sending message
 	filemsg fm(0, 0); // message to request file size
-	string fname = "nonsense"; 
-	// cout << fname << endl;
-	
-	int len = sizeof(filemsg) + (fname.size() + 1);
-	char* buf2 = new char[len];
-	memcpy(buf2, &fm, sizeof(filemsg)); // copy fm to buf2
-	strcpy(buf2 + sizeof(filemsg), fname.c_str()); // 
-	chan.cwrite(buf2, len);  // I want the file length; // send fm to server
-	// do something with that
-	// create file & copy requested patient file to it
+	string fname = "default"; 
+	// only do file request if a file was actually requested
+	if (filename != "") {
+		fname = filename;
+		int len = sizeof(filemsg) + (fname.size() + 1);
+		char* buf2 = new char[len];
+		memcpy(buf2, &fm, sizeof(filemsg)); // copy fm to buf2
+		strcpy(buf2 + sizeof(filemsg), fname.c_str()); // 
+		chan.cwrite(buf2, len);  // I want the file length; // send fm to server
+		__int64_t fileSize; // get file size from server
+		chan.cread(&fileSize, sizeof(__int64_t));
+		// create file & copy requested patient file to it
+		string copyFileName = "received/";
+		copyFileName = copyFileName + filename;
+		int copyFD;
+		char* copyFile[] = {(char*) copyFileName.c_str(), (char*) nullptr};
+		copyFD = open(*copyFile, O_CREAT|O_TRUNC|O_WRONLY, S_IRWXU); // create file in recieved directory
+		if (copyFD == -1) {
+			cerr << "file copy failed to open!";
+			return 1;
+		}
+		// copy requested file to the new one
 
-	delete[] buf2;
-	
-	// closing the channel    
-	// cout << "closing server" << endl; // test line
+
+		delete[] buf2;
+		close(copyFD);
+	}
+
+	// closing the channel & server
     MESSAGE_TYPE m = QUIT_MSG;
     chan.cwrite(&m, sizeof(MESSAGE_TYPE));
-	// cout << "server closed" << endl; // test line
 }
