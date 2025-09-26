@@ -1,0 +1,12 @@
+1024 bytes(1KiB)            - 0.000116621 s, 8.8 MB/s
+10240 bytes (10KiB)         - 0.000572778 s, 17.9 MB/s
+102400 bytes (100KiB)       - 0.000360016 s, 284 MB/s
+1048576 bytes (1 MiB)       - 0.00231793 s, 452 MB/s
+10485760 bytes (10 MiB)     - 0.0250242 s, 419 MB/s
+104857600 bytes (100 MiB)   - 0.220143 s, 476 MB/s
+1048576000 bytes (1000 MiB) - 3.71495 s, 282 MB/s
+
+
+we can see that above between 100 KB and 1 GB file sizes, the transfer time increases approximately linearly with file size. 
+The transfer time seems to vary significantly for small file sizes but is relatively predictable for large ones.
+The bottleneck for larger files is simply that only the MAX_BUFFER amount of bytes can be transferred at a time.  
