@@ -23,9 +23,12 @@ int main (int argc, char *argv[]) {
 	double t = 0.0;
 	int e = 0;
 	int m = MAX_MESSAGE; 
+	bool c = false; // is set to true if new channel is requested
+	FIFORequestChannel* newChan = nullptr;
+	vector<FIFORequestChannel*> channels;
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:m:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:c")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg); // atoi = 'alpha to int'
@@ -42,7 +45,9 @@ int main (int argc, char *argv[]) {
 			case 'm':
 				m = atoi (optarg);
 				break;
-
+			case 'c':
+				c = true;
+				break;
 		}
 	}
 
@@ -61,7 +66,8 @@ int main (int argc, char *argv[]) {
 		return 1; // if server creation fails
 	}
 
-    FIFORequestChannel chan("control", FIFORequestChannel::CLIENT_SIDE);
+    FIFORequestChannel control_chan("control", FIFORequestChannel::CLIENT_SIDE);
+	channels.push_back(&control_chan);
 	
 	// example data point request
     // char buf[MAX_MESSAGE]; // 256
@@ -72,6 +78,23 @@ int main (int argc, char *argv[]) {
 	
 	// chan.cread(&reply, sizeof(double)); //answer
 	// cout << "For person " << p << ", at time " << t << ", the value of ecg " << e << " is " << reply << endl;
+
+	// 4.4: Requesting a new channel, this needs to happen before anything else
+	if (c) {
+		MESSAGE_TYPE channelRequest = NEWCHANNEL_MSG;
+		control_chan.cwrite(&channelRequest, sizeof(MESSAGE_TYPE));
+		// variable to hold name
+		char chanNameBuf[31];
+		// cread response from server
+		control_chan.cread(&chanNameBuf, sizeof(chanNameBuf));
+		// call FIFORequestChannel constructor with the name from the server (dynamically, with new)
+		newChan = new FIFORequestChannel(chanNameBuf, FIFORequestChannel::CLIENT_SIDE);
+		// push new channel to channels vector
+		channels.push_back(newChan);
+	}
+
+	// use the most recently pushed channel as the main communication line
+	FIFORequestChannel chan = *(channels.back()); 
 
 	// 4.2: Requesting Data Points
 	// only do it if data points were requested
@@ -134,7 +157,7 @@ int main (int argc, char *argv[]) {
 	
 	 
 	// only do file request if a file was actually requested
-	cout << "filename: " << filename << endl;
+	// cout << "filename: " << filename << endl; // DEBUG LINE
 	if (filename != "") {
 		// sending message
 		filemsg fm(0, 0); // message to request file size
@@ -192,8 +215,10 @@ int main (int argc, char *argv[]) {
 		close(copyFD);
 	}
 
-	// 4.4: Requesting a new channel
-
+	// if necessary, close & delete the new channel
+	if (c) {
+		delete newChan;
+	}
 	// closing the channel & server
     MESSAGE_TYPE msg = QUIT_MSG;
     chan.cwrite(&msg, sizeof(MESSAGE_TYPE));
