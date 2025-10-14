@@ -20,10 +20,10 @@ void t_init()
         getcontext(ucp); // this should be the main thread
 
         // make sure to allocate stack
-        ucp->uc_stack.ss_sp = (char *) malloc(STK_SZ);
-        ucp->uc_stack.ss_size = STK_SZ;
-        ucp->uc_stack.ss_flags = 0;
-        ucp->uc_link = NULL;
+        // ucp->uc_stack.ss_sp = (char *) malloc(STK_SZ);
+        // ucp->uc_stack.ss_size = STK_SZ;
+        // ucp->uc_stack.ss_flags = 0;
+        // ucp->uc_link = NULL;
         // makecontext(ucp, (int ) &main, 0);
 
 
