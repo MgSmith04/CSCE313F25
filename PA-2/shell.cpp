@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <vector>
 #include <string>
@@ -83,28 +84,48 @@ int main () {
         if (pid == 0) {  // if child, exec to run command
             // run single commands with arguments
             //TODO: this needs to be able to handle commands with any # of arguments
-            long unsigned int cmdArrayLength = 1; 
-            for (long unsigned int i = 0; i < tknr.commands.size() ; ++i) {
-                cmdArrayLength += tknr.commands.at(i)->args.size();
-            }
-            cout << cmdArrayLength << endl;
-            char** args = new char*[cmdArrayLength];
-            for (long unsigned int i = 0; i < cmdArrayLength - 1; ++i) {
-                args[i] = (char*) tknr.commands.at(0)->args.at(i).c_str();
-            }
-            args[cmdArrayLength - 1] = nullptr;
-            // for (long unsigned int i = 0; i < cmdArrayLength - 1; ++i) {
-            //     cout << "args[" << i << "] = " << *args[i];
-            // }
+            // long unsigned int cmdArrayLength = tknr.commands.size(); // number of commands
+            // cerr << cmdArrayLength << endl; // TEST LINE
 
-            
+            // each command should have it's own args array?
+            // for all commands that have been pipelined
+            for (auto cmd : tknr.commands) {
+                long unsigned int cmdArgsSize = tknr.commands.at(0)->args.size() + 1;
+                // cerr << "cmdArgsSize: " << cmdArgsSize << endl; // TEST LINE
+                char** args = new char*[cmdArgsSize];
+                for (long unsigned int i = 0; i < cmdArgsSize - 1; ++i) {
+                    // cerr << "args[i] = " << tknr.commands.at(0)->args.at(i).c_str() << endl; // TEST LINE
+                    args[i] = (char*) tknr.commands.at(0)->args.at(i).c_str();
+                }
+                args[cmdArgsSize - 1] = nullptr;
+                // cerr << "range test" << endl; // TEST LINE
+                // for (long unsigned int i = 0; i < cmdArrayLength - 1; ++i) {
+                //     cout << "args[" << i << "] = " << *args[i];
+                // }
 
-            // run single commands with no arguments
-            // char* args[] = {(char*) tknr.commands.at(0)->args.at(0).c_str(), nullptr};
+                
 
-            if (execvp(args[0], args) < 0) {  // error check
-                perror("execvp");
-                exit(2);
+                // run single commands with no arguments
+                // char* args[] = {(char*) tknr.commands.at(0)->args.at(0).c_str(), nullptr};
+
+                // output file descriptor change
+                if (cmd->hasOutput()) {
+                    // cerr << "has output: " << cmd->out_file << endl; // TEST LINE
+                    int outFileFD = open((char*) cmd->out_file.c_str(), O_CREAT|O_TRUNC|O_RDWR);
+                    // cerr << "outFileFD: " << outFileFD << endl; // TEST LINE
+                    dup2(outFileFD, STDOUT_FILENO); // is this backwards from the order on the manpage? idk
+                }
+                // input file descriptor change
+                if (cmd->hasInput()) {
+                    int inFileFD = open((char*) cmd->in_file.c_str(), O_RDONLY);
+                    // cerr << "outFileFD: " << outFileFD << endl; // TEST LINE
+                    dup2(inFileFD, STDIN_FILENO); // is this backwards from the order on the manpage? idk
+                }
+
+                if (execvp(args[0], args) < 0) {  // error check
+                    perror("execvp");
+                    exit(2);
+                }
             }
         }
         else {  // if parent, wait for child to finish
